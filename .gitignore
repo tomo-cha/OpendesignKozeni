@@ -1,0 +1,28 @@
+# VSCode
+.vscode/
+*.code-workspace
+
+# PlatformIO
+.pio/
+.pioenvs/
+.pio/build/
+.platformio/
+
+# Node.js (もしPlatformIOでNode.jsのツールやライブラリを使用している場合)
+node_modules/
+
+# OS generated files
+.DS_Store  # macOS
+Thumbs.db  # Windows
+*.log
+
+# Temp or backup files
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Other
+*.sln  # If you're using Visual Studio for development alongside VSCode
+*.user  # Visual Studio user-specific project settings
+*.sublime*  # If you're using Sublime Text for development alongside VSCode
