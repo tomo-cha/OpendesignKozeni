@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
-#include <Servo.h> 
+// #include <Servo.h> 
 // サーボモータの制御のためのライブラリをインクルード
 
 // Variables
