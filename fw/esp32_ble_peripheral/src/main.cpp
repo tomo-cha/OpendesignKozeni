@@ -13,7 +13,7 @@ bool deviceConnected = false;
 int globalValue = 0;
 
 // servo pin
-int buttonPin = 32;
+int servoPin = 32;
 
 // https://www.uuidgenerator.net/
 #define SERVICE_UUID "199a9fa8-94f8-46bc-8228-ce67c9e807e6"
@@ -61,7 +61,7 @@ void moveServoRight()
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(9600);     
 
   // Create the BLE Device
   BLEDevice::init(BLEName.c_str());
@@ -92,6 +92,10 @@ void setup()
   Serial.println("Waiting a client connection to notify...");
 
   pinMode(_LED_PIN, OUTPUT);
+
+  myservo.attach(servoPin);
+  myservo.write(40); 
+
 }
 
 void loop()
