@@ -69,6 +69,22 @@ onSend=function(){
         }).catch(error => { console.error(error); });
     }
 }
+
+onSendB = function() {
+    var info = document.getElementById('iInfo');
+    info.innerHTML += "onSendB<br>";
+    if (g_characteristic != null) {
+        info.innerHTML += "g_characteristic != null for B<br>";
+        console.log('send B');
+        const asciiB = 'B'.charCodeAt(0);
+        g_characteristic.writeValue(Uint8Array.of(asciiB))
+        .then(_ => {
+            info.innerHTML += "g_characteristic.writeValue(Uint8Array.of(asciiB))<br>";
+            console.log('B send ok.');
+        }).catch(error => { console.error(error); });
+    }
+}
+
 onRead=function(){
     var info=document.getElementById('iInfo');
     info.innerHTML+="onRead<br>";
@@ -84,10 +100,12 @@ onClear=function(){
     var info=document.getElementById('iInfo');
     info.innerHTML="---";
 }
+
 </script>
 <body onload="_onload()">
 <input type="button" id="iCheckBtn" value="check" onclick="ckFnc()"></input>
 <input type="button" id="iSendBtn" value="---" onclick="onSend()"></input>
+<input type="button" id="iSendBBtn" value="Right Moving" onclick="onSendB()"></input>
 <div id='iInfo'>---</div>
 <input type="button" id="iClearInfo" value="ClearInfo" onclick="onClear()"></input>
 </body></html>
