@@ -138,44 +138,27 @@ function containsKeyword(summary, keyword) {
     return summary.toLowerCase().includes(keyword.toLowerCase());
 }
 
-/**
- * Print the summary and start datetime/date of the next ten events in
- * the authorized user's calendar. If no events are found an
- * appropriate message is printed.
- */
-async function listUpcomingEvents() {
-    let response;
-    try {
-        const request = {
-            'calendarId': 'primary',
-            'timeMin': (new Date()).toISOString(),
-            'showDeleted': false,
-            'singleEvents': true,
-            'maxResults': 10,
-            'orderBy': 'startTime',
-        };
-        response = await gapi.client.calendar.events.list(request);
-    } catch (err) {
-        document.getElementById('content').innerText = err.message;
-        return;
-    }
-
-    const events = response.result.items;
-    if (!events || events.length == 0) {
-        document.getElementById('content').innerText = 'No events found.';
-        return;
-    }
-
-    const output = events.reduce(
-        (str, event) => `${str}${event.summary} (${event.start.dateTime || event.start.date})\n`,
-        'Events:\n');
-
-    const meetingsOutput = events
-        .filter(event => containsKeyword(event.summary, "meeting"))
-        .reduce(
-            (str, event) => `${str}${event.start.dateTime || event.start.date}\n`,
-            'Meeting Times:\n');
-
-    document.getElementById('content').innerText = output;
-    document.getElementById('meetingTimes').innerText = meetingsOutput; // こちらの要素をHTMLに追加する必要があります
+function displayMeetingTimes() {
+    gapi.client.calendar.events.list({
+        'calendarId': 'primary',
+        'timeMin': (new Date()).toISOString(),
+        'showDeleted': false,
+        'singleEvents': true,
+        'maxResults': 10,
+        'orderBy': 'startTime',
+    }).then(response => {
+        const events = response.result.items;
+        const meetingsOutput = events
+            .filter(event => containsKeyword(event.summary, "meeting"))
+            .reduce(
+                (str, event) => `${str}${event.start.dateTime || event.start.date}\n`,
+                'Meeting Times:\n'
+            );
+        document.getElementById('meetingTimes').innerText = meetingsOutput;
+    });
 }
+
+// Attach the function to a button click event
+document.getElementById('displayMeetingTimesButton').addEventListener('click', displayMeetingTimes);
+
+
