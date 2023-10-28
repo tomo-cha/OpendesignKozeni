@@ -1,7 +1,7 @@
-document.addEventListener('DOMContentLoaded', (event) => {
-    document.getElementById('authorize_button').style.visibility = 'hidden';
-    document.getElementById('signout_button').style.visibility = 'hidden';
-});
+// document.addEventListener('DOMContentLoaded', (event) => {
+//     document.getElementById('authorize_button').style.visibility = 'hidden';
+//     document.getElementById('signout_button').style.visibility = 'hidden';
+// });
 
 const CLIENT_ID = '593980784395-mcopk6oi9gc419ognfb8nulkm58j8838.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyBulbUZ6M_i2u2R_vuCcDGEDb5Pf48SsFQ';
