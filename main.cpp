@@ -3,6 +3,7 @@
 const int GSR = 34; // 接続するanalog pin
 int gsr_sensorValue = 0;
 int gsr_average = 0;
+int old_gsr_average;
 unsigned long previousMillis = 0;
 const long interval = 3000;
 
@@ -17,6 +18,7 @@ const float alpha = 0.8; // RCフィルタの定数 (0 < alpha < 1)
 int heart_filteredValue = 0;
 const int heart_threshold = 3500;
 long time_goal;
+int bpm = 0;
 const int bpm_threshold = 155; // https://clinic.zenplace.co.jp/335/
 
 // サーボ
@@ -92,7 +94,7 @@ void loop()
   {
     long time_start = millis();
     int beat_time = time_goal - time_start; // 1拍の時間(ms)
-    int bpm = 60000 / beat_time;            // beat per minute
+    bpm = 60000 / beat_time;            // beat per minute
     Serial.print("bpm:");
     Serial.print(bpm);
     Serial.print(",");
