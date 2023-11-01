@@ -109,18 +109,22 @@ void loop()
   if (gsr_average < old_gsr_average && bpm > bpm_threshold)
   {
     // 緊張している
+    Serial.print("Nervous");
   }
   else if (gsr_average < old_gsr_average && bpm < bpm_threshold)
   {
     // 緊張から回復している
+    Serial.print("Recovering");
   }
   else if (gsr_average > old_gsr_average && bpm > bpm_threshold)
   {
     // 緊張ではなく運動している
+    Serial.print("Exercising");
   }
   else if (gsr_average > old_gsr_average && bpm < bpm_threshold)
   {
     // 緊張していない
+    Serial.print("Not Nervous");
   }
 
   /*
