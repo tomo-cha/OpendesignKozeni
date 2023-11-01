@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESP32Servo.h>
 // GSRセンサ
 const int GSR = 34; // 接続するanalog pin
 int gsr_sensorValue = 0;
@@ -22,6 +23,23 @@ int bpm = 0;
 const int bpm_threshold = 155; // https://clinic.zenplace.co.jp/335/
 
 // サーボ
+Servo myservo;                 // サーボモータオブジェクトのインスタンスを作成
+int servoPin = 32;              // サーボを接続するピン。適宜変更してください
+
+void moveServo()
+{
+  for (int i = 40; i < 120; i+=2)
+  {
+    myservo.write(i);  // サーボを0度の位置に動かす
+    delay(30);        // 0.5秒待つ
+  }
+
+  for (int i = 120; i > 40; i-=2)
+  {
+    myservo.write(i);  // サーボを0度の位置に動かす
+    delay(50);        // 0.5秒待つ
+  }
+}
 
 void setup()
 {
@@ -29,6 +47,8 @@ void setup()
   // GSRセンサ
   // 心拍センサ
   // サーボ
+  myservo.attach(servoPin);         // サーボピンを指定
+  myservo.write(40); 
 }
 
 void loop()
@@ -94,12 +114,12 @@ void loop()
   {
     long time_start = millis();
     int beat_time = time_goal - time_start; // 1拍の時間(ms)
-    bpm = 60000 / beat_time;            // beat per minute
-    Serial.print("bpm:");
-    Serial.print(bpm);
-    Serial.print(",");
+    bpm = 60000 / beat_time;                // beat per minute
     time_goal = time_start;
   }
+  Serial.print("bpm:");
+  Serial.print(bpm);
+  Serial.print(",");
 
   /*
   緊張の判定
@@ -110,6 +130,7 @@ void loop()
   {
     // 緊張している
     Serial.print("Nervous");
+    moveServo();
   }
   else if (gsr_average < old_gsr_average && bpm < bpm_threshold)
   {
