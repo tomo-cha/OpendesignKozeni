@@ -151,7 +151,7 @@ function formatDateTime(dateTimeString) {
         .filter(event => containsKeyword(event.summary, "meeting"))
         .reduce((str, event) => {
           const formattedTime = formatDateTime(event.start.dateTime || event.start.date);
-          sendDataToBLEDevice(formattedTime); // BLEデバイスに時刻データを送信
+        //   sendDataToBLEDevice(formattedTime); // BLEデバイスに時刻データを送信
           return `${str}${formattedTime}\n`;
         }, 'Meeting Times:\n');
       document.getElementById('meetingTimes').innerText = meetingsOutput;
