@@ -137,6 +137,7 @@ function formatDateTime(dateTimeString) {
   }
 
   function displayMeetingTimes() {
+    console.log("displayMeetingTimes was called");
     gapi.client.calendar.events.list({
       'calendarId': 'primary',
       'timeMin': (new Date()).toISOString(),
