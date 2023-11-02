@@ -132,25 +132,36 @@ function containsKeyword(summary, keyword) {
     return summary.toLowerCase().includes(keyword.toLowerCase());
 }
 
-function displayMeetingTimes() {
+// データをHH:MM:SSにフォーマットする関数
+function formatDateTime(dateTimeString) {
+    const date = new Date(dateTimeString);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
+  function displayMeetingTimes() {
     gapi.client.calendar.events.list({
-        'calendarId': 'primary',
-        'timeMin': (new Date()).toISOString(),
-        'showDeleted': false,
-        'singleEvents': true,
-        'maxResults': 10,
-        'orderBy': 'startTime',
+      'calendarId': 'primary',
+      'timeMin': (new Date()).toISOString(),
+      'showDeleted': false,
+      'singleEvents': true,
+      'maxResults': 10,
+      'orderBy': 'startTime',
     }).then(response => {
-        const events = response.result.items;
-        const meetingsOutput = events
-            .filter(event => containsKeyword(event.summary, "meeting"))
-            .reduce(
-                (str, event) => `${str}${event.start.dateTime || event.start.date}\n`,
-                'Meeting Times:\n'
-            );
-        document.getElementById('meetingTimes').innerText = meetingsOutput;
+      const events = response.result.items;
+      const meetingsOutput = events
+        .filter(event => containsKeyword(event.summary, "meeting"))
+        .reduce((str, event) => {
+          const formattedTime = formatDateTime(event.start.dateTime || event.start.date);
+          sendDataToBLEDevice(formattedTime); // BLEデバイスに時刻データを送信
+          return `${str}${formattedTime}\n`;
+        }, 'Meeting Times:\n');
+      document.getElementById('meetingTimes').innerText = meetingsOutput;
     });
-}
+  }
+  
 
 // Attach the function to a button click event
 document.getElementById('displayMeetingTimesButton').addEventListener('click', displayMeetingTimes);

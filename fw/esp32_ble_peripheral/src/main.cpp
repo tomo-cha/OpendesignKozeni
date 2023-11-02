@@ -46,7 +46,12 @@ class MyServerCallbacks : public BLEServerCallbacks
 int receivedHour = 0, receivedMinute = 0, receivedSecond = 0;
 bool updateReceivedTime = false;
 
+// 　予定された時刻を保存するためのグローバル変数
+int scheduleHour = 0, scheduleMinute = 0, scheduleSecond = 0;
+bool updateReceivedSchedule = false;
+
 // 現在時刻を受け付けるためのコールバック
+// および予約時間を受け付けるための変数を追加
 class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
 {
   void onWrite(BLECharacteristic *pCharacteristic)
@@ -55,12 +60,22 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
 
     if (value.length() > 0)
     {
+      // 時間
       sscanf(value.c_str(), "%02d:%02d:%02d", &receivedHour, &receivedMinute, &receivedSecond);
-
-      // 時刻更新のフラグをセット
       updateReceivedTime = true;
-
       Serial.println("Received Time: " + String(receivedHour) + ":" + String(receivedMinute) + ":" + String(receivedSecond));
+
+      // 予定
+      if (value.length() > 0)
+      {
+        // 予定のデータを受信した場合
+        if (sscanf(value.c_str(), "%02d:%02d:%02d", &scheduleHour, &scheduleMinute, &scheduleSecond) == 3)
+        {
+          // 予定更新のフラグをセット
+          updateReceivedSchedule = true;
+          Serial.println("Received Schedule Time: " + String(scheduleHour) + ":" + String(scheduleMinute) + ":" + String(scheduleSecond));
+        }
+      }
     }
   }
 };
@@ -189,6 +204,6 @@ void loop()
   }
   delay(100);
 
-  //BLEと一度接続された後にその時刻を継続的に吐き出す処理
+  // BLEと一度接続された後にその時刻を継続的に吐き出す処理
   timePrint();
 }
