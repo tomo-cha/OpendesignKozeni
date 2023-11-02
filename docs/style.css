@@ -11,12 +11,16 @@ html {
   font-size: 80%;
 }
 
+body{
+  top:100px;
+}
+
 .button{
   font-size: 1.6rem;
   font-weight: 600;
   line-height: 1.5;
   position: relative;
-  display: flex;
+  display: inline-block;
   padding: 1rem 4rem;
   cursor: pointer;
   -webkit-user-select: none;
