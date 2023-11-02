@@ -4,6 +4,7 @@
     <head>
         <title>BLE test</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- スケールサイズを調整 -->
+        <link rel="stylesheet" href="./style.css">
     </head>
 
     <script src="https://apis.google.com/js/platform.js?onload=onLoadCallback" async defer></script>
@@ -11,13 +12,13 @@
     <script src="currentTime.js"></script>
 
     <body onload="_onload()">
-    <input type="button" id="iCheckBtn" value="check" onclick="ckFnc()"></input>
-    <input type="button" id="iSendBtn" value="---" onclick="onSend()"></input>
-    <input type="button" id="iSendBBtn" value="Right Moving" onclick="onSendB()"></input>
+    <input type="button" id="iCheckBtn" value="check" onclick="ckFnc()" class="button"></input>
+    <input type="button" id="iSendBtn" value="---" onclick="onSend()" class="button"></input>
+    <input type="button" id="iSendBBtn" value="Right Moving" onclick="onSendB()" class="button"></input>
 
     <div id='iInfo'>---</div>
 
-    <input type="button" id="iClearInfo" value="ClearInfo" onclick="onClear()"></input>
+    <input type="button" id="iClearInfo" value="ClearInfo" onclick="onClear()" class="button"></input>
 
     <div>CalenderAPI</div>
     
@@ -26,15 +27,13 @@
     </a>
     
     <div>現在時刻の送信</div>
-    <button onclick="sendCurrentTime()">Send Current Time</button>
+    <button onclick="sendCurrentTime()" class="button">Send Current Time</button>
 
     <!-- google calender API -->
     <div>カレンダー情報の取得と送信</div>
-    <button id="authorize_button" onclick="handleAuthClick()">Authorize</button>
-    <button id="signout_button" onclick="handleSignoutClick()">Sign Out</button>
-
-    <!-- これをポチるとmeetingのデータを抽出・送信できるようになっている -->
-    <button id="displayMeetingTimesButton">Display Meeting Times</button>
+    <button id="authorize_button" onclick="handleAuthClick()" class="button">Authorize</button>
+    <button id="signout_button" onclick="handleSignoutClick()" class="button">Sign Out</button>
+    <button id="displayMeetingTimesButton" class="button">Display Meeting Times</button>
     <pre id="meetingTimes"></pre>
 
     <pre id="content" style="white-space: pre-wrap;"></pre>
