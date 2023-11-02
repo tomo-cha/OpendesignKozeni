@@ -16,7 +16,7 @@ html {
   font-weight: 600;
   line-height: 1.5;
   position: relative;
-  display: inline-block;
+  display: flex;
   padding: 1rem 4rem;
   cursor: pointer;
   -webkit-user-select: none;
