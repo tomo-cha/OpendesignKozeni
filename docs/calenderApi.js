@@ -1,9 +1,14 @@
 const CLIENT_ID = '593980784395-mcopk6oi9gc419ognfb8nulkm58j8838.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyBulbUZ6M_i2u2R_vuCcDGEDb5Pf48SsFQ';
-// Discovery doc URL for APIs used by the quickstart
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+
+const serviceUUID = "199a9fa8-94f8-46bc-8228-ce67c9e807e6";
+const characteristicUUID = "208c149e-8266-4686-8918-981e90546c2a";
+let bleDevice = null;
+let bleServer = null;
+let timeService = null;
+let timeCharacteristic = null;
 
 let tokenClient;
 let gapiInited = false;
@@ -16,10 +21,6 @@ function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
 }
 
-/**
- * Callback after the API client is loaded. Loads the
- * discovery doc to initialize the API.
- */
 async function initializeGapiClient() {
     await gapi.client.init({
         apiKey: API_KEY,
@@ -29,31 +30,22 @@ async function initializeGapiClient() {
     maybeEnableButtons();
 }
 
-/**
- * Callback after Google Identity Services are loaded.
- */
 function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: '', // defined later
+        callback: '',
     });
     gisInited = true;
     maybeEnableButtons();
 }
 
-/**
- * Enables user interaction after all libraries are loaded.
- */
 function maybeEnableButtons() {
     if (gapiInited && gisInited) {
         document.getElementById('authorize_button').style.visibility = 'visible';
     }
 }
 
-/**
- *  Sign in the user upon button click.
- */
 function handleAuthClick() {
     tokenClient.callback = async (resp) => {
         if (resp.error !== undefined) {
@@ -65,18 +57,12 @@ function handleAuthClick() {
     };
 
     if (gapi.client.getToken() === null) {
-        // Prompt the user to select a Google Account and ask for consent to share their data
-        // when establishing a new session.
         tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
-        // Skip display of account chooser and consent dialog for an existing session.
         tokenClient.requestAccessToken({ prompt: '' });
     }
 }
 
-/**
- *  Sign out the user upon button click.
- */
 function handleSignoutClick() {
     const token = gapi.client.getToken();
     if (token !== null) {
@@ -88,7 +74,6 @@ function handleSignoutClick() {
     }
 }
 
-//ユーザのイベントをlistにする
 async function listUpcomingEvents() {
     let response;
     try {
@@ -111,55 +96,72 @@ async function listUpcomingEvents() {
         document.getElementById('content').innerText = 'No events found.';
         return;
     }
-    // Flatten to string to display
+
     const output = events.reduce(
         (str, event) => `${str}${event.summary} (${event.start.dateTime || event.start.date})\n`,
         'Events:\n');
     document.getElementById('content').innerText = output;
 }
 
-//予定名に特定の単語が含まれているかを検索するための関数
 function containsKeyword(summary, keyword) {
     return summary.toLowerCase().includes(keyword.toLowerCase());
 }
 
-// function containsKeyword(summary, keyword) {
-//     return summary.toLowerCase().includes(keyword.toLowerCase());
-// }
-
-// データをHH:MM:SSにフォーマットする関数
 function formatDateTime(dateTimeString) {
     const date = new Date(dateTimeString);
     const hours = date.getUTCHours().toString().padStart(2, '0');
     const minutes = date.getUTCMinutes().toString().padStart(2, '0');
     const seconds = date.getUTCSeconds().toString().padStart(2, '0');
     return `${hours}:${minutes}:${seconds}`;
-  }
+}
 
-  function displayMeetingTimes() {
+function displayMeetingTimes() {
     console.log("displayMeetingTimes was called");
     gapi.client.calendar.events.list({
-      'calendarId': 'primary',
-      'timeMin': (new Date()).toISOString(),
-      'showDeleted': false,
-      'singleEvents': true,
-      'maxResults': 10,
-      'orderBy': 'startTime',
+        'calendarId': 'primary',
+        'timeMin': (new Date()).toISOString(),
+        'showDeleted': false,
+        'singleEvents': true,
+        'maxResults': 10,
+        'orderBy': 'startTime',
     }).then(response => {
-      const events = response.result.items;
-      const meetingsOutput = events
-        .filter(event => containsKeyword(event.summary, "meeting"))
-        .reduce((str, event) => {
-          const formattedTime = formatDateTime(event.start.dateTime || event.start.date);
-        //   sendDataToBLEDevice(formattedTime); // BLEデバイスに時刻データを送信
-          return `${str}${formattedTime}\n`;
-        }, 'Meeting Times:\n');
-      document.getElementById('meetingTimes').innerText = meetingsOutput;
+        const events = response.result.items;
+        const meetingsOutput = events
+            .filter(event => containsKeyword(event.summary, "meeting"))
+            .reduce((str, event) => {
+                const formattedTime = formatDateTime(event.start.dateTime || event.start.date);
+                sendDataToBLEDevice(formattedTime);
+                return `${str}${formattedTime}\n`;
+            }, 'Meeting Times:\n');
+        document.getElementById('meetingTimes').innerText = meetingsOutput;
     });
-  }
-  
+}
 
-// Attach the function to a button click event
+async function connectBLE() {
+    try {
+        bleDevice = await navigator.bluetooth.requestDevice({
+            filters: [{services: [serviceUUID]}]
+        });
+        bleServer = await bleDevice.gatt.connect();
+        timeService = await bleServer.getPrimaryService(serviceUUID);
+        timeCharacteristic = await timeService.getCharacteristic(characteristicUUID);
+    } catch (error) {
+        console.error("Error connecting to BLE device:", error);
+    }
+}
+
+async function sendDataToBLEDevice(dataString) {
+    if (!timeCharacteristic) {
+        await connectBLE();
+    }
+    const encoder = new TextEncoder('utf-8');
+    const data = encoder.encode(dataString);
+    try {
+        await timeCharacteristic.writeValue(data);
+        console.log(`Sent data: ${dataString}`);
+    } catch (error) {
+        console.error("Error sending data:", error);
+    }
+}
+
 document.getElementById('displayMeetingTimesButton').addEventListener('click', displayMeetingTimes);
-
-
