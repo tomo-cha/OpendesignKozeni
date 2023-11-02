@@ -66,15 +66,11 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
       Serial.println("Received Time: " + String(receivedHour) + ":" + String(receivedMinute) + ":" + String(receivedSecond));
 
       // 予定
-      if (value.length() > 0)
+      if (sscanf(value.c_str(), "%02d:%02d:%02d", &scheduleHour, &scheduleMinute, &scheduleSecond) == 3)
       {
-        // 予定のデータを受信した場合
-        if (sscanf(value.c_str(), "%02d:%02d:%02d", &scheduleHour, &scheduleMinute, &scheduleSecond) == 3)
-        {
-          // 予定更新のフラグをセット
-          updateReceivedSchedule = true;
-          Serial.println("Received Schedule Time: " + String(scheduleHour) + ":" + String(scheduleMinute) + ":" + String(scheduleSecond));
-        }
+        // 予定更新のフラグをセット
+        updateReceivedSchedule = true;
+        Serial.println("Received Schedule Time: " + String(scheduleHour) + ":" + String(scheduleMinute) + ":" + String(scheduleSecond));
       }
     }
   }
