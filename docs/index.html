@@ -3,16 +3,12 @@
 <html>
     <head>
         <title>BLE test</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- スケールサイズを調整 -->
     </head>
-    <!-- <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script> -->
+
     <script src="https://apis.google.com/js/platform.js?onload=onLoadCallback" async defer></script>
-    
-    <!-- <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script> -->
-    <!-- <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script> -->
-    
-    <!-- <script src="calenderApi.js"></script> -->
     <script src="BLE.js"></script>
+    <script src="currentTime.js"></script>
 
 <body onload="_onload()">
     <input type="button" id="iCheckBtn" value="check" onclick="ckFnc()"></input>
@@ -22,19 +18,16 @@
     <div id='iInfo'>---</div>
 
     <input type="button" id="iClearInfo" value="ClearInfo" onclick="onClear()"></input>
-    <!-- <input type="button" id="iClearInfo" value="ClearInfomation" onclick="onClear()"></input> -->
-    <!-- <button id="authorize-button" style="visibility: hidden">Authorize</button> -->
+
     <div>CalenderAPI</div>
-    <!-- <input type="button" id="calenderlogin" value="LOGIN" onclick="handleAuthClick()"></input>
-    <input type="button" id="calenderlogin" value="SIGNOUT" onclick="handleSignoutClick()"></input> -->
-
-    <!-- <button id="authorize_button" onclick="handleAuthClick()">Authorize</button> -->
-    <!-- <button id="signout_button" onclick="handleSignoutClick()">Sign Out</button> -->
-
+    
     <a href="calender.html">
-        <div style="width: 200px; height: 200px; border: 1px solid black;">
-            このエリア全体をクリックするとmypage.htmlにジャンプします。
-        </div>
-    </a>    
+        <div>google calenderのAPIをつかって予定を取得する</div>
+    </a>
+    
+    <div>現在時刻の送信</div>
+    <button onclick="sendCurrentTime()">Send Current Time</button>
+    
+
 </body>
 </html>
