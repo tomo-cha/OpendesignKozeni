@@ -3,7 +3,7 @@ const API_KEY = 'AIzaSyBulbUZ6M_i2u2R_vuCcDGEDb5Pf48SsFQ';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
-const serviceUUID = "199a9fa8-94f8-46bc-8228-ce67c9e807e6";
+// const serviceUUID = "199a9fa8-94f8-46bc-8228-ce67c9e807e6";
 const characteristicUUID = "208c149e-8266-4686-8918-981e90546c2a";
 let bleDevice = null;
 let bleServer = null;
