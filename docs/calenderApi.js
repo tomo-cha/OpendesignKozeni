@@ -123,14 +123,9 @@ function containsKeyword(summary, keyword) {
     return summary.toLowerCase().includes(keyword.toLowerCase());
 }
 
-// ... [省略されたコード]
-
-/**
- * Check if an event summary contains the keyword.
- */
-function containsKeyword(summary, keyword) {
-    return summary.toLowerCase().includes(keyword.toLowerCase());
-}
+// function containsKeyword(summary, keyword) {
+//     return summary.toLowerCase().includes(keyword.toLowerCase());
+// }
 
 // データをHH:MM:SSにフォーマットする関数
 function formatDateTime(dateTimeString) {
