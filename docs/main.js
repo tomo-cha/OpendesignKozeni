@@ -41,11 +41,6 @@ const API_KEY = 'AIzaSyBulbUZ6M_i2u2R_vuCcDGEDb5Pf48SsFQ';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
-let bleDevice = null;
-let bleServer = null;
-let timeService = null;
-let timeCharacteristic = null;
-
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
@@ -57,7 +52,9 @@ function gapiLoaded() {
 async function initializeGapiClient() {
     await gapi.client.init({
         apiKey: API_KEY,
+        clientId: CLIENT_ID,
         discoveryDocs: [DISCOVERY_DOC],
+        scope: SCOPES
     });
     gapiInited = true;
     maybeEnableButtons();
@@ -66,8 +63,7 @@ async function initializeGapiClient() {
 function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '',
+        scope: SCOPES
     });
     gisInited = true;
     maybeEnableButtons();
@@ -79,61 +75,26 @@ function maybeEnableButtons() {
     }
 }
 
-function handleAuthClick() {
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            throw (resp);
-        }
-        document.getElementById('signout_button').style.visibility = 'visible';
-        document.getElementById('authorize_button').innerText = 'Refresh';
-        await listUpcomingEvents();
-    };
-
-    if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-        tokenClient.requestAccessToken({ prompt: '' });
-    }
-}
-
-function handleSignoutClick() {
-    const token = gapi.client.getToken();
-    if (token !== null) {
-        google.accounts.oauth2.revoke(token.access_token);
-        gapi.client.setToken('');
-        document.getElementById('content').innerText = '';
-        document.getElementById('authorize_button').innerText = 'Authorize';
-        document.getElementById('signout_button').style.visibility = 'hidden';
-    }
-}
-
 async function listUpcomingEvents() {
-    let response;
-    try {
-        const request = {
-            'calendarId': 'primary',
-            'timeMin': (new Date()).toISOString(),
-            'showDeleted': false,
-            'singleEvents': true,
-            'maxResults': 10,
-            'orderBy': 'startTime',
-        };
-        response = await gapi.client.calendar.events.list(request);
-    } catch (err) {
-        document.getElementById('content').innerText = err.message;
-        return;
-    }
-
+    const request = {
+        'calendarId': 'primary',
+        'timeMin': (new Date()).toISOString(),
+        'showDeleted': false,
+        'singleEvents': true,
+        'maxResults': 10,
+        'orderBy': 'startTime',
+    };
+    const response = await gapi.client.calendar.events.list(request);
     const events = response.result.items;
+
     if (!events || events.length == 0) {
         document.getElementById('content').innerText = 'No events found.';
-        return;
+    } else {
+        const output = events.reduce(
+            (str, event) => `${str}${event.summary} (${event.start.dateTime || event.start.date})\n`,
+            'Events:\n');
+        document.getElementById('content').innerText = output;
     }
-
-    const output = events.reduce(
-        (str, event) => `${str}${event.summary} (${event.start.dateTime || event.start.date})\n`,
-        'Events:\n');
-    document.getElementById('content').innerText = output;
 }
 
 function containsKeyword(summary, keyword) {
@@ -142,64 +103,38 @@ function containsKeyword(summary, keyword) {
 
 function formatDateTime(dateTimeString) {
     const date = new Date(dateTimeString);
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    return `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}:${date.getUTCSeconds().toString().padStart(2, '0')}`;
 }
 
-function displayMeetingTimes() {
-    console.log("displayMeetingTimes was called");
-    gapi.client.calendar.events.list({
+async function getNextMeetingTime() {
+    let meetingTime = null;
+    const response = await gapi.client.calendar.events.list({
         'calendarId': 'primary',
         'timeMin': (new Date()).toISOString(),
         'showDeleted': false,
         'singleEvents': true,
         'maxResults': 10,
         'orderBy': 'startTime',
-    }).then(response => {
-        const events = response.result.items;
-        const meetingsOutput = events
-            .filter(event => containsKeyword(event.summary, "meeting"))
-            .reduce((str, event) => {
-                const formattedTime = formatDateTime(event.start.dateTime || event.start.date);
-                sendDataToBLEDevice(formattedTime);
-                return `${str}${formattedTime}\n`;
-            }, 'Meeting Times:\n');
-        document.getElementById('meetingTimes').innerText = meetingsOutput;
     });
-}
+    const nextMeeting = response.result.items.find(event => containsKeyword(event.summary, "meeting"));
 
-async function getNextMeetingTime() {
-    let meetingTime = null;
-    try {
-        const response = await gapi.client.calendar.events.list({
-            'calendarId': 'primary',
-            'timeMin': (new Date()).toISOString(),
-            'showDeleted': false,
-            'singleEvents': true,
-            'maxResults': 10,
-            'orderBy': 'startTime',
-        });
-        const events = response.result.items;
-        const nextMeeting = events.find(event => containsKeyword(event.summary, "meeting"));
-        if (nextMeeting) {
-            meetingTime = formatDateTime(nextMeeting.start.dateTime || nextMeeting.start.date);
-        }
-    } catch (error) {
-        console.error("Error fetching next meeting time:", error);
+    if (nextMeeting) {
+        meetingTime = formatDateTime(nextMeeting.start.dateTime || nextMeeting.start.date);
     }
     return meetingTime;
 }
 
-document.getElementById('sendMeetingTimeBtn').addEventListener('click', async () => {
-    let meetingTime = await getNextMeetingTime();
-    if(meetingTime) {
-        await bleConnection.sendData('MEETING', meetingTime);
-        document.getElementById('info').innerHTML += `Sent meeting time: ${meetingTime}<br>`;
-    } else {
-        document.getElementById('info').innerHTML += `No upcoming meetings found.<br>`;
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('authorize_button').addEventListener('click', handleAuthClick);
+    document.getElementById('signout_button').addEventListener('click', handleSignoutClick);
+    document.getElementById('sendMeetingTimeBtn').addEventListener('click', async () => {
+        const meetingTime = await getNextMeetingTime();
+        if (meetingTime) {
+            await bleConnection.sendData('MEETING', meetingTime);
+            document.getElementById('info').innerText = `Sent meeting time: ${meetingTime}`;
+        } else {
+            document.getElementById('info').innerText = 'No upcoming meetings found.';
+        }
+    });
+    document.getElementById('displayMeetingTimesButton').addEventListener('click', displayMeetingTimes);
 });
-
-document.getElementById('displayMeetingTimesButton').addEventListener('click', displayMeetingTimes);

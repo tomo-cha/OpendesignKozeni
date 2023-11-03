@@ -20,28 +20,25 @@
     <!-- 情報を表示するエリア -->
     <div id="iInfo">---</div>
 
-    <script src="BleConnection.js"></script>
-    <script src="main.js"></script>
-
     <div>カレンダー情報の取得と送信</div>
+    <!-- 認証ボタン -->
+    <button id="authorize_button" style="visibility: hidden;">Authorize</button>
+    <!-- サインアウトボタン -->
+    <button id="signout_button" style="visibility: hidden;">Sign Out</button>
+    <!-- ミーティングの時間をBLEに送信するボタン -->
+    <button id="sendMeetingTimeBtn">Send Meeting Time to BLE</button>
+    <!-- ミーティングの時間を表示するボタン -->
+    <button id="displayMeetingTimesButton">Display Meeting Times</button>
 
-    <!-- 承認 -->
-    <button id="authorize_button" onclick="handleAuthClick()" class="button">Authorize</button>
-
-    <p>次のイベントを閲覧させる</p>
-    <div>
-      <h2>Upcoming Meeting Times</h2>
-      <pre id="meetingTimes"></pre>
-    </div>
-    <!-- <button id="displayMeetingTimesButton">Show Next Meeting Time</button> -->
-    <button id="displayMeetingTimesButton" onclick="displayMeetingTimes()">Show Next Meeting Time</button>
-
-    <div>イベントを送信</div>
-    <button id="sendMeetingTimeBtn">Send Next Meeting Time</button>
+    <!-- イベントの内容を表示する領域 -->
+    <div id="content"></div>
+    <!-- ミーティングの時間やBLE送信の情報を表示する領域 -->
     <div id="info"></div>
 
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <!-- Google APIのスクリプトと、上で記述したJavaScriptファイルのリンク -->
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-
+    <script src="BleConnection.js"></script>
+    <script src="main.js"></script>
   </body>
 </html>
