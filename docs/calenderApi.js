@@ -14,6 +14,8 @@ let tokenClient;
 let gapiInited = false;
 let gisInited = false;
 
+//fix me : jsで競合しないようにしてください。
+
 document.getElementById('authorize_button').style.visibility = 'hidden';
 document.getElementById('signout_button').style.visibility = 'hidden';
 
