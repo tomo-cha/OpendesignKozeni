@@ -201,3 +201,5 @@ document.getElementById('sendMeetingTimeBtn').addEventListener('click', async ()
         document.getElementById('info').innerHTML += `No upcoming meetings found.<br>`;
     }
 });
+
+document.getElementById('displayMeetingTimesButton').addEventListener('click', displayMeetingTimes);

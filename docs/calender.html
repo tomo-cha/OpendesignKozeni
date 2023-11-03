@@ -24,7 +24,18 @@
     <script src="main.js"></script>
 
     <div>カレンダー情報の取得と送信</div>
+
+    <!-- 承認 -->
     <button id="authorize_button" onclick="handleAuthClick()" class="button">Authorize</button>
+
+    <p>次のイベントを閲覧させる</p>
+    <div>
+      <h2>Upcoming Meeting Times</h2>
+      <pre id="meetingTimes"></pre>
+    </div>
+    <button id="displayMeetingTimesButton">Show Next Meeting Time</button>
+
+    <div>イベントを送信</div>
     <button id="sendMeetingTimeBtn">Send Next Meeting Time</button>
     <div id="info"></div>
 
