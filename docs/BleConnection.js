@@ -1,6 +1,7 @@
 // BleConnection.js
 class BleConnection {
-    constructor(serviceUUID, characteristicUUID) {
+    constructor(deviceName, serviceUUID, characteristicUUID) {
+        this.deviceName = deviceName; // デバイス名を追加
         this.bleDevice = null;
         this.bleServer = null;
         this.timeService = null;
@@ -12,7 +13,8 @@ class BleConnection {
     async connect() {
         try {
             this.bleDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [this.serviceUUID] }]
+                filters: [{ name: this.deviceName }], // ここをデバイス名でのフィルタリングに変更
+                optionalServices: [this.serviceUUID] // サービスUUIDはoptionalServicesに追加
             });
             this.bleServer = await this.bleDevice.gatt.connect();
             this.timeService = await this.bleServer.getPrimaryService(this.serviceUUID);
@@ -22,31 +24,44 @@ class BleConnection {
         }
     }
 
+    //データを識別するためのメソッド
+    createCommandData(commandType, payload) {
+        return commandType + ":" + payload;
+    }
+
+    // 現在時刻を送信する
     async sendCurrentTime() {
+        const now = new Date();
+        const currentTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+        await this.sendData('TIME', currentTime);
+    }
+
+    //送信
+    async sendData(commandType, payload = '') {
         if (!this.timeCharacteristic) {
             await this.connect();
         }
-        const now = new Date();
-        const currentTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+        const data = this.createCommandData(commandType, payload);
         const encoder = new TextEncoder('utf-8');
-        const data = encoder.encode(currentTime);
+        const encodedData = encoder.encode(data);
         try {
-            await this.timeCharacteristic.writeValue(data);
-            console.log(`Sent time: ${currentTime}`);
+            await this.timeCharacteristic.writeValue(Uint8Array.from(encodedData));
+            console.log(`Sent command: ${commandType}, payload: ${payload}`);
         } catch (error) {
-            console.error("Error sending time:", error);
+            console.error(error);
         }
     }
 
-    async sendData(value) {
+    //データを読み込むためのメソッド
+    async onRead() {
         if (!this.timeCharacteristic) {
             await this.connect();
         }
         try {
-            await this.timeCharacteristic.writeValue(Uint8Array.of(value));
-            console.log(`${value} send ok.`);
+            const value = await this.timeCharacteristic.readValue();
+            console.log(`value= ${value.getUint8(0)}`);
         } catch (error) {
-            console.error(error);
+            console.error("Error reading value:", error);
         }
     }
 }

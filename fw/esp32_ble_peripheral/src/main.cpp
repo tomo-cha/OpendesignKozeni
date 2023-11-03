@@ -42,6 +42,22 @@ class MyServerCallbacks : public BLEServerCallbacks
   }
 };
 
+// 右にスイープして戻す
+void moveServoRight()
+{
+  for (int i = 40; i < 120; i += 2)
+  {
+    myservo.write(i); // サーボを0度の位置に動かす
+    delay(30);        // 0.5秒待つ
+  }
+
+  for (int i = 120; i > 40; i -= 2)
+  {
+    myservo.write(i); // サーボを0度の位置に動かす
+    delay(50);        // 0.5秒待つ
+  }
+}
+
 // 現在時刻を保存するためのグローバル変数
 int receivedHour = 0, receivedMinute = 0, receivedSecond = 0;
 bool updateReceivedTime = false;
@@ -60,17 +76,39 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
 
     if (value.length() > 0)
     {
-      // 時間
-      sscanf(value.c_str(), "%02d:%02d:%02d", &receivedHour, &receivedMinute, &receivedSecond);
-      updateReceivedTime = true;
-      Serial.println("Received Time: " + String(receivedHour) + ":" + String(receivedMinute) + ":" + String(receivedSecond));
-
-      // 予定
-      if (sscanf(value.c_str(), "%02d:%02d:%02d", &scheduleHour, &scheduleMinute, &scheduleSecond) == 3)
+      // コマンドの場合の処理
+      if (value.substr(0, 4) == "CMD:")
       {
-        // 予定更新のフラグをセット
-        updateReceivedSchedule = true;
-        Serial.println("Received Schedule Time: " + String(scheduleHour) + ":" + String(scheduleMinute) + ":" + String(scheduleSecond));
+        char cmd = value[4]; // 5番目の文字を取得
+        if (cmd == 'A')
+        {
+          // ここでグローバル変数に書き込めばそのモードに変更可能
+          digitalWrite(_LED_PIN, HIGH);
+
+          Serial.println("Received Command: A");
+        }
+        else if (cmd == 'B')
+        {
+          // moveServoRight();
+          globalValue += 1;
+          digitalWrite(_LED_PIN, LOW);
+          Serial.println("Received Command: B");
+        }
+        // 他のコマンドも同様に追加
+      }
+      // 時刻の場合の処理
+      else if (value.substr(0, 5) == "TIME:")
+      {
+        sscanf(value.substr(5).c_str(), "%02d:%02d:%02d", &receivedHour, &receivedMinute, &receivedSecond);
+        updateReceivedTime = true;
+        Serial.println("Received Time: " + String(receivedHour) + ":" + String(receivedMinute) + ":" + String(receivedSecond));
+      }
+      // 他のデータ形式に対する処理も追加可能
+      if (value.substr(0, 8) == "MEETING:")
+      {
+        sscanf(value.substr(8).c_str(), "%02d:%02d:%02d", &receivedHour, &receivedMinute, &receivedSecond);
+        updateReceivedTime = true;
+        Serial.println("Received Meeting Time: " + String(receivedHour) + ":" + String(receivedMinute) + ":" + String(receivedSecond));
       }
     }
   }
@@ -102,22 +140,6 @@ void timePrint()
 
     // 更新された時刻をシリアルに出力
     Serial.printf("%02d:%02d:%02d\n", receivedHour, receivedMinute, receivedSecond);
-  }
-}
-
-// 右にスイープして戻す
-void moveServoRight()
-{
-  for (int i = 40; i < 120; i += 2)
-  {
-    myservo.write(i); // サーボを0度の位置に動かす
-    delay(30);        // 0.5秒待つ
-  }
-
-  for (int i = 120; i > 40; i -= 2)
-  {
-    myservo.write(i); // サーボを0度の位置に動かす
-    delay(50);        // 0.5秒待つ
   }
 }
 
@@ -165,41 +187,6 @@ void setup()
 
 void loop()
 {
-  if (deviceConnected)
-  {
-    // Serial.print(".");
-    uint8_t *pData = pCharacteristic->getData();
-    if (pData[0] == 'A')
-    {
-      digitalWrite(_LED_PIN, HIGH);
-      Serial.print("recieve this : ");
-      Serial.println(pData[0]);
-    }
-    else if (pData[0] == 'B')
-    {
-      moveServoRight();
-      globalValue += 1;
-
-      digitalWrite(_LED_PIN, LOW);
-      Serial.print("recieve this : ");
-      Serial.println(pData[0]);
-    }
-    else if (pData[0] == 'C')
-    {
-      globalValue -= 1;
-      digitalWrite(_LED_PIN, LOW);
-
-      Serial.print("recieve this : ");
-      Serial.println(pData[0]);
-    }
-    else
-    {
-      digitalWrite(_LED_PIN, LOW);
-    }
-    pCharacteristic->notify();
-  }
-  delay(100);
-
   // BLEと一度接続された後にその時刻を継続的に吐き出す処理
   timePrint();
 }
