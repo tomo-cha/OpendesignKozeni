@@ -36,7 +36,12 @@ class BleConnection {
         await this.sendData('TIME', currentTime);
     }
 
-    //送信
+    //ミーティング時間を送信する
+    async sendMeetingTime(meetingTime) {
+        await this.sendData('MEETING', meetingTime);
+    }
+
+    //データを送信するためのフォーマット
     async sendData(commandType, payload = '') {
         if (!this.timeCharacteristic) {
             await this.connect();

@@ -17,6 +17,18 @@ document.getElementById('sendTimeBtn').addEventListener('click', async () => {
     document.getElementById('iInfo').innerHTML += `Sent time: ${new Date().toLocaleTimeString()}<br>`;
 });
 
+//meetings時間を送信
+document.getElementById('meetingTimes').addEventListener('DOMSubtreeModified', async () => {
+    const meetingTimeElem = document.getElementById('meetingTimes');
+    if (meetingTimeElem.innerText.includes('Meeting Times:')) {
+        const meetingTime = meetingTimeElem.innerText.split('\n')[1]; // 2行目に時刻があると仮定
+        if (meetingTime) {
+            await bleConnection.sendMeetingTime(meetingTime);
+            document.getElementById('iInfo').innerHTML += `Sent meeting time: ${meetingTime}<br>`;
+        }
+    }
+});
+
 // データ 'A' の送信ボタン
 document.getElementById('sendABtn').addEventListener('click', async () => {
     await bleConnection.sendData('CMD', 'A');
