@@ -100,13 +100,22 @@ function containsKeyword(summary, keyword) {
     return summary.toLowerCase().includes(keyword.toLowerCase());
 }
 
+// function formatDateTime(dateTimeString) {
+//     const date = new Date(dateTimeString);
+//     const hours = date.getUTCHours().toString().padStart(2, '0');
+//     const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+//     const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+//     return `${hours}:${minutes}:${seconds}`;
+// }
 function formatDateTime(dateTimeString) {
     const date = new Date(dateTimeString);
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+    // UTC時間ではなく、ローカルの時間を取得
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
     return `${hours}:${minutes}:${seconds}`;
 }
+
 
 function displayMeetingTimes() {
     console.log("displayMeetingTimes was called");
