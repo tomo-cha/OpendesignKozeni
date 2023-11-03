@@ -62,7 +62,7 @@ void moveServoRight()
 int receivedHour = 0, receivedMinute = 0, receivedSecond = 0;
 bool updateReceivedTime = false;
 
-// 　予定された時刻を保存するためのグローバル変数
+// 予定された時刻を保存するためのグローバル変数
 int scheduleHour = 0, scheduleMinute = 0, scheduleSecond = 0;
 bool updateReceivedSchedule = false;
 
@@ -106,9 +106,9 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
       // 他のデータ形式に対する処理も追加可能
       if (value.substr(0, 8) == "MEETING:")
       {
-        sscanf(value.substr(8).c_str(), "%02d:%02d:%02d", &receivedHour, &receivedMinute, &receivedSecond);
-        updateReceivedTime = true;
-        Serial.println("Received Meeting Time: " + String(receivedHour) + ":" + String(receivedMinute) + ":" + String(receivedSecond));
+        sscanf(value.substr(8).c_str(), "%02d:%02d:%02d", &scheduleHour, &scheduleMinute, &scheduleSecond);
+        updateReceivedSchedule = true;
+        Serial.println("Received Meeting Time: " + String(scheduleHour) + ":" + String(scheduleMinute) + ":" + String(scheduleSecond));
       }
     }
   }
@@ -140,6 +140,30 @@ void timePrint()
 
     // 更新された時刻をシリアルに出力
     Serial.printf("%02d:%02d:%02d\n", receivedHour, receivedMinute, receivedSecond);
+  }
+}
+
+// Lチカ
+void blinkLed() 
+{
+  for(int i = 0; i < 10; i++){
+    digitalWrite(_LED_PIN,HIGH);
+    delay(150);
+    digitalWrite(_LED_PIN,LOW);
+    delay(150);
+  }
+}
+
+// 　予定時刻と現在の時刻が一致したらLちかさせる
+void checkTime()
+{
+  if (updateReceivedTime && updateReceivedSchedule)
+  {
+    if (receivedHour == scheduleHour && receivedMinute == scheduleMinute && receivedSecond == scheduleSecond)
+    {
+      // LEDを点灯させる関数
+      blinkLed();
+    }
   }
 }
 
@@ -189,4 +213,5 @@ void loop()
 {
   // BLEと一度接続された後にその時刻を継続的に吐き出す処理
   timePrint();
+  checkTime();
 }
