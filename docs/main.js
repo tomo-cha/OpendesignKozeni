@@ -4,6 +4,15 @@ const CHARACTERISTIC_UUID = "208c149e-8266-4686-8918-981e90546c2a";
 
 let bleConnection = new BleConnection(SERVICE_UUID, CHARACTERISTIC_UUID);
 
+document.getElementById('connectBtn').addEventListener('click', async () => {
+    try {
+        await bleConnection.connect();
+        alert('接続しました！');
+    } catch (error) {
+        alert('接続に失敗しました: ' + error);
+    }
+});
+
 document.getElementById('sendTimeBtn').addEventListener('click', () => {
     bleConnection.sendCurrentTime();
 });
