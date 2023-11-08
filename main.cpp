@@ -11,47 +11,25 @@ const long interval = 3000;
 // 心拍センサ
 const int HEART = 35; // 接続するanalog pin
 int heart_sensorValue = 0;
-const int numSamples = 5; // 平均を取るサンプル数
-int samples[numSamples];
-int samples_index = 0;
-int samples_total = 0;
-const float alpha = 0.8; // RCフィルタの定数 (0 < alpha < 1)
-int heart_filteredValue = 0;
-const int heart_threshold = 3500;
-long time_goal;
-int bpm = 0;
-const int bpm_threshold = 155; // https://clinic.zenplace.co.jp/335/
+const int heart_threshold = 3100;
+volatile int bpm = 0;
+volatile int beatLastTime = 0; // 前回のビートを検知した時刻を保存するための変数
+const int bpm_threshold = 90;  // https://clinic.zenplace.co.jp/335/
+
+//緊張の判定
+int nervous_combo_count = 0;
+int last_nervous_time = 0;
 
 // サーボ
-Servo myservo;                 // サーボモータオブジェクトのインスタンスを作成
-int servoPin = 32;              // サーボを接続するピン。適宜変更してください
+Servo myservo;     // サーボモータオブジェクトのインスタンスを作成
+int servoPin = 32; // サーボを接続するピン。適宜変更してください
 
-void moveServo()
-{
-  for (int i = 40; i < 120; i+=2)
-  {
-    myservo.write(i);  // サーボを0度の位置に動かす
-    delay(30);        // 0.5秒待つ
-  }
+// ボタン
+int buttonPin = 14; // 任意のボタンピンを選択。変更が必要な場合はこちらを変更してください
+int buttonFlag = 0;
+int buttonCount = 1;
 
-  for (int i = 120; i > 40; i-=2)
-  {
-    myservo.write(i);  // サーボを0度の位置に動かす
-    delay(50);        // 0.5秒待つ
-  }
-}
-
-void setup()
-{
-  Serial.begin(9600);
-  // GSRセンサ
-  // 心拍センサ
-  // サーボ
-  myservo.attach(servoPin);         // サーボピンを指定
-  myservo.write(40); 
-}
-
-void loop()
+void getGsrData()
 {
   /*
   GSRセンサ
@@ -78,7 +56,9 @@ void loop()
     previousMillis = currentMillis;
     old_gsr_average = gsr_average;
   }
-
+}
+void getHeartData()
+{
   /*
   心拍センサ
   未装着時2900~3100
@@ -87,72 +67,120 @@ void loop()
   平均値を出力する
   BPMを計算する
   */
-  heart_sensorValue = analogRead(HEART);
-  /*移動平均フィルタ*/
-  // samples[samples_index] = sensorValue; // サンプルを配列に格納し、totalに加算
-  // samples_total += sensorValue;
-  // samples_index = (samples_index + 1) % numSamples; // 次のインデックスを計算
-  // if (samples_index == 0)                   // 平均を計算してシリアルモニタに出力
-  // {
-  //   heart_filteredValue = samples_total / numSamples;
-  //   Serial.print("heart:");
-  //   Serial.print(heart_filteredValue);
-  //   Serial.print(",");
-  //   samples_total = 0; // totalをリセット
-  // }
+  heart_sensorValue = analogRead(HEART); // Read the PulseSensor's value.
 
-  /*RCフィルタ*/
-  heart_filteredValue = alpha * heart_sensorValue + (1 - alpha) * heart_filteredValue;
-  Serial.print("heart:");
-  Serial.print(analogRead(HEART));
-  Serial.print(",");
-  Serial.print("heart_filtered:");
-  Serial.print(heart_filteredValue);
-  Serial.print(",");
-
-  if (heart_filteredValue > heart_threshold)
-  {
-    long time_start = millis();
-    int beat_time = time_goal - time_start; // 1拍の時間(ms)
-    bpm = 60000 / beat_time;                // beat per minute
-    time_goal = time_start;
+  if (heart_sensorValue > heart_threshold && (millis() - beatLastTime) > 250)
+  {                                          // 250msのデバウンス時間
+    bpm = 60000 / (millis() - beatLastTime); // BPMを計算
+    beatLastTime = millis();                 // 最後にビートを検出した時間を更新
   }
+  Serial.println(heart_sensorValue); // Signal valueをシリアルに送信
   Serial.print("bpm:");
   Serial.print(bpm);
   Serial.print(",");
+}
+void moveServo1()
+{ // 低い緊張緩和
+  for (int i = 40; i < 120; i += 2)
+  {
+    myservo.write(i); // サーボを0度の位置に動かす
+    delay(30);        // 0.5秒待つ
+  }
 
+  for (int i = 120; i > 0; i -= 2)
+  {
+    myservo.write(i); // サーボを0度の位置に動かす
+    delay(50);        // 0.5秒待つ
+  }
+
+  for (int i = 0; i < 40; i += 2)
+  {
+    myservo.write(i); // サーボを0度の位置に動かす
+    delay(30);        // 0.5秒待つ
+  }
+}
+void moveServo2()
+{ // 中の緊張緩和
+}
+void moveServo3()
+{ // 高い緊張緩和
+}
+
+void setup()
+{
+  Serial.begin(9600);//シリアル通信
+
+  // GSRセンサ
+
+  // 心拍センサ
+
+  // サーボ
+  myservo.attach(servoPin); // サーボピンを指定
+  myservo.write(40);
+
+  // ボタン
+  pinMode(buttonPin, INPUT_PULLUP); // ボタンのピンを入力としてセット、内部プルアップを有効に
+}
+
+void loop()
+{
+  getGsrData();
+  getHeartData();
   /*
   緊張の判定
-  GSR: 数秒前の値と比べて、下がっていたら緊張している
+  GSR: 一つ前の値と比べて、下がっていたら緊張している
   BPM: 一定値以上なら緊張している
   */
-  if (gsr_average < old_gsr_average && bpm > bpm_threshold)
+  if (old_gsr_average - gsr_average > 100 && bpm > bpm_threshold)// 緊張している
   {
-    // 緊張している
     Serial.print("Nervous");
-    moveServo();
+    if (nervous_combo_count < 5)//どれだけmode2で撫でても緊張しているようだったら、mode3に移行する
+    {
+      moveServo2();
+    }
+    else
+    {
+      moveServo3();
+    }
+    nervous_combo_count++;
+    last_nervous_time = millis();
   }
-  else if (gsr_average < old_gsr_average && bpm < bpm_threshold)
+  else//緊張していない
   {
-    // 緊張から回復している
-    Serial.print("Recovering");
-  }
-  else if (gsr_average > old_gsr_average && bpm > bpm_threshold)
-  {
-    // 緊張ではなく運動している
-    Serial.print("Exercising");
-  }
-  else if (gsr_average > old_gsr_average && bpm < bpm_threshold)
-  {
-    // 緊張していない
-    Serial.print("Not Nervous");
+    if (millis() - last_nervous_time > 30000)//30秒以上緊張していなかったら、
+    {
+      nervous_combo_count = 0;
+    }
+    //ここに30分前の通知をするコード
   }
 
-  /*
-  サーボ
-  BLEで動かす
-  amaneさんのと合体
-  */
+
+  /*デモ用で残しておきたい。ボタンで動きを見せられるように*/
+  if (buttonFlag == 1 && digitalRead(buttonPin) == LOW)
+  {
+    if (buttonCount == 1)
+    {
+      moveServo1();
+    }
+    else if (buttonCount == 2)
+    {
+      moveServo2();
+    }
+    else if (buttonCount == 3)
+    {
+      moveServo3();
+    }
+    buttonCount++;
+    if (buttonCount > 3)
+    {
+      buttonCount = 1;
+    }
+    buttonFlag == 0;
+  }
+  if (buttonFlag == 0 && digitalRead(buttonPin) == HIGH)
+  {
+    buttonFlag == 1;
+  }
 
   Serial.print("\n");
 }
