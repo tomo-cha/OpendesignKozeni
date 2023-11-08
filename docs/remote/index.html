@@ -21,12 +21,12 @@
     function sendMessage() {
       var message = { message: 'hello from browser A' }; // 送信するメッセージ
 
-      // PusherのHTTP APIエンドポイントにPOSTリクエストを送信
-      fetch('https://api.pusherapp.com/apps/1703055/events', {
+      // 通常はサーバ経由で行いますが、デモ目的で直接APIを呼び出します
+      fetch('https://api.pusherapp.com/apps/YOUR_APP_ID/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer 51b9d25f96dbe20789b0' // WARNING
+          'Authorization': 'Bearer YOUR_APP_SECRET' // 本番環境ではクライアントサイドにシークレットを置かないでください
         },
         body: JSON.stringify({
           name: 'my-event',
