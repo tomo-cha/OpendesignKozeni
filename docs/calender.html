@@ -27,11 +27,13 @@
     <button id="displayMeetingTimesButton" onclick="displayMeetingTimes()" class="button">Display Meeting Times</button>
     <pre id="meetingTimes"></pre>
 
+    <!-- 情報を表示するエリア2 -->
     <pre id="content" style="white-space: pre-wrap;"></pre>
 
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-    
+
+    <!-- htmlで呼び出してるjs -->
     <script src="googleApi.js"></script>
     <script src="BleConnection.js"></script>
     <script src="main.js"></script>
