@@ -12,7 +12,7 @@ bool deviceConnected = false;
 int globalValue = 0;
 
 // servo pin
-int servoPin = 32;
+int servoPin = 21;
 
 // https://www.uuidgenerator.net/
 #define SERVICE_UUID "199a9fa8-94f8-46bc-8228-ce67c9e807e6"
@@ -89,7 +89,7 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
         }
         else if (cmd == 'B')
         {
-          // moveServoRight();
+          moveServoRight();
           globalValue += 1;
           digitalWrite(_LED_PIN, LOW);
           Serial.println("Received Command: B");
