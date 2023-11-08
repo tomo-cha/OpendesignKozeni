@@ -1,9 +1,9 @@
 <!DOCTYPE html>
+<html>
 <head>
   <title>Pusher Test</title>
   <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
   <script>
-
     // Enable pusher logging - don't include this in production
     Pusher.logToConsole = true;
 
@@ -13,14 +13,48 @@
 
     var channel = pusher.subscribe('my-channel');
     channel.bind('my-event', function(data) {
-      alert(JSON.stringify(data));
+      // データを受け取ったらブラウザ上で何かする
+      alert('Data received: ' + JSON.stringify(data));
     });
+
+    // メッセージを送信する関数
+    function sendMessage() {
+      var message = { message: 'hello from browser A' }; // 送信するメッセージ
+
+      // 通常はサーバ経由で行いますが、デモ目的で直接APIを呼び出します
+      fetch('https://api.pusherapp.com/apps/YOUR_APP_ID/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer YOUR_APP_SECRET' // 本番環境ではクライアントサイドにシークレットを置かないでください
+        },
+        body: JSON.stringify({
+          name: 'my-event',
+          channel: 'my-channel',
+          data: message
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log(data);
+      })
+      .catch(e => {
+        console.log('Sending message failed: ', e);
+      });
+    }
   </script>
 </head>
 <body>
   <h1>Pusher Test</h1>
+  <button onclick="sendMessage()">Send Message from Browser A</button>
   <p>
     Try publishing an event to channel <code>my-channel</code>
     with event name <code>my-event</code>.
   </p>
 </body>
+</html>
