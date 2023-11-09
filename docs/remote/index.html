@@ -1,60 +1,54 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Pusher Test</title>
-  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-  <script>
-    // Enable pusher logging - don't include this in production
-    Pusher.logToConsole = true;
+  <head>
+    <title>Pusher Test</title>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script>
+      // Enable pusher logging - don't include this in production
+      Pusher.logToConsole = true;
 
-    var pusher = new Pusher('81486e43ee71f896ee1c', { // 公開キー
-      cluster: 'ap3'
-    });
-
-    var channel = pusher.subscribe('my-channel');
-    channel.bind('my-event', function(data) {
-      // データを受け取ったらブラウザ上で何かする
-      alert('Data received: ' + JSON.stringify(data));
-    });
-
-    // メッセージを送信する関数
-    function sendMessage() {
-      var message = { message: 'hello from browser A' }; // 送信するメッセージ
-
-      // PusherのHTTP APIエンドポイントにPOSTリクエストを送信
-      fetch('https://api.pusherapp.com/apps/1703055/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer 51b9d25f96dbe20789b0' // WARNINGS
-        },
-        body: JSON.stringify({
-          name: 'my-event',
-          channel: 'my-channel',
-          data: message
-        })
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log(data);
-      })
-      .catch(e => {
-        console.log('Sending message failed: ', e);
+      var pusher = new Pusher("81486e43ee71f896ee1c", {
+        // 公開キー
+        cluster: "ap3",
       });
-    }
-  </script>
-</head>
-<body>
-  <h1>Pusher Test</h1>
-  <button onclick="sendMessage()">Send Message from Browser A</button>
-  <p>
-    Try publishing an event to channel <code>my-channel</code>
-    with event name <code>my-event</code>.
-  </p>
-</body>
+
+      var channel = pusher.subscribe("my-channel");
+      channel.bind("my-event", function (data) {
+        alert("Data received: " + JSON.stringify(data));
+      });
+
+      function sendMessage() {
+        var message = { message: "hello from browser A" }; // 送信するメッセージ
+
+        fetch("/pusher/trigger", {
+          // ローカルのNode.jsサーバーに対してPOSTリクエストを送信
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(message),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Message sent: ", data);
+          })
+          .catch((e) => {
+            console.log("Sending message failed: ", e);
+          });
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Pusher Test</h1>
+    <button onclick="sendMessage()">Send Message from Browser A</button>
+    <p>
+      Try publishing an event to channel <code>my-channel</code> with event name
+      <code>my-event</code>.
+    </p>
+  </body>
 </html>
