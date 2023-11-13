@@ -13,9 +13,8 @@ int globalValue = 0;
 
 // sensor PIN : VIN(5v) -> 33 -> 32
 // servo PIN : 3.3V -> 19 -> 21
-int servoPin = 21;
-// int servoPin = 21;
-// int servoPin = 27;
+const int servoPin = 21;
+const int PulseSensorPurplePin = 32;
 
 // https://www.uuidgenerator.net/
 #define SERVICE_UUID "199a9fa8-94f8-46bc-8228-ce67c9e807e6"
@@ -205,20 +204,30 @@ void checkTime()
   }
 }
 
-//  心拍センサの値を取得してその結果を返す
+// 心拍センサーデータの処理のための変数
+float lpfHeart = 0;                // ローパスフィルタの出力
+float hpfHeart = 0;                // ハイパスフィルタの出力
+float previousBpfHeart = 0;        // 前のバンドパスフィルタの出力
+float bpfHeart = 0;                // バンドパスフィルタの出力
+const float filterAlpha = 0.8;     // フィルタのアルファ（LPF用）
+const float filterAlphaBand = 0.2; // フィルタのアルファ（BPF用）
 
-const int PulseSensorPurplePin = 32;
+// センサデータを読み取り、バンドパスフィルタを適用する関数
+float applyBandPassFilter(int sensorValue)
+{
+  // DC成分をカットするためのローパスフィルタ
+  lpfHeart = filterAlpha * lpfHeart + (1.0 - filterAlpha) * sensorValue;
 
-int Signal;                              // Incoming raw data from the pulse sensor
-int Threshold = 3100;                    // Determine which signal to "count as a beat"
-volatile int BPM;                        // Beats Per Minute (BPM)
-volatile unsigned long beatLastTime = 0; // Time when the last beat was detected
+  // 高周波ノイズをカットするためのハイパスフィルタ
+  hpfHeart = sensorValue - lpfHeart;
 
-// 心拍センサの値をハイパスフィルタリングするための変数
-const float alpha = 0.9; // フィルタの強度を設定
-int rawSignal;           // 生のセンサー値
-int filteredSignal;      // フィルタリングされた値
-int lastFilteredSignal;  // 前回のフィルタリングされた値
+  // バンドパスフィルタの適用
+  bpfHeart = filterAlphaBand * previousBpfHeart + (1.0 - filterAlphaBand) * hpfHeart;
+
+  previousBpfHeart = bpfHeart; // 次の計算のために現在のフィルタ出力を保存
+
+  return bpfHeart;
+}
 
 // BPM値をBLEキャラクタリスティックにセットして通知する関数
 void notifyBPM(int bpmValue)
@@ -237,19 +246,33 @@ void notifyBPM(int bpmValue)
   }
 }
 
-void readPulseSensor()
-{
-  Signal = analogRead(PulseSensorPurplePin);
-  if (Signal > Threshold && (millis() - beatLastTime) > 250)
-  {
-    BPM = 60000 / (millis() - beatLastTime);
-    beatLastTime = millis();
-    Serial.print("BPM: ");
-    Serial.println(BPM);
+// BPMを計算するための変数
+volatile unsigned long lastBeatTime = 0; // 最後のビートが検出された時間
+const int threshold = 300;               // バンドパスフィルタ後の値の閾値
 
-    // BPM値をBLE経由で通知
-    notifyBPM(BPM);
+// バンドパスフィルタ後の値からBPMを計算する関数
+void calculateBPM()
+{
+  // バンドパスフィルタを適用した値を取得
+  int sensorValue = analogRead(PulseSensorPurplePin);
+  float filteredValue = applyBandPassFilter(sensorValue);
+
+  // BPMの計算と通知
+  if (filteredValue > threshold && (millis() - lastBeatTime) > 250)
+  {                                              // ビート検出条件
+    int bpm = 60000 / (millis() - lastBeatTime); // BPM計算
+    lastBeatTime = millis();                     // 最後のビート時間を更新
+
+    // BPM値をBLE経由で通知（関数は既に定義されていると仮定）
+    notifyBPM(bpm);
+
+    // シリアルポートにフィルタリングされた値とBPMを出力
+
+    Serial.print("BPM: ");
+    Serial.println(bpm);
   }
+  // Serial.print("Filtered Sensor Value: ");
+  // Serial.println(filteredValue);
 }
 
 void setup()
@@ -302,23 +325,7 @@ void loop()
   timePrint();
   checkTime();
 
-  // 心拍センサの値を取得してシリアルに出力する。
-  // readPulseSensor();
-  // Serial.println(Signal);
-
-  rawSignal = analogRead(PulseSensorPurplePin);
-
-  // ハイパスフィルタを適用する
-  filteredSignal = alpha * (lastFilteredSignal + rawSignal - lastFilteredSignal);
-
-  // 心拍を検出するロジック（ここに追加）
-
-  // シリアルにフィルタリングされた値を出力する
-  Serial.print("Filtered Signal: ");
-  Serial.println(filteredSignal);
-
-  // 以前のフィルタリングされた値を更新
-  lastFilteredSignal = filteredSignal;
+  calculateBPM();
 
   delay(20);
 }
