@@ -11,8 +11,11 @@ bool deviceConnected = false;
 // グローバル変数の追加
 int globalValue = 0;
 
-// servo pin
+// sensor PIN : VIN(5v) -> 33 -> 32
+// servo PIN : 3.3V -> 19 -> 21
 int servoPin = 21;
+// int servoPin = 21;
+// int servoPin = 27;
 
 // https://www.uuidgenerator.net/
 #define SERVICE_UUID "199a9fa8-94f8-46bc-8228-ce67c9e807e6"
@@ -110,6 +113,14 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
         updateReceivedSchedule = true;
         Serial.println("Received Meeting Time: " + String(scheduleHour) + ":" + String(scheduleMinute) + ":" + String(scheduleSecond));
       }
+      // 遠隔のデータ（スライダ）が送信されていたら
+      if (value.rfind("SLIDER:", 0) == 0)
+      {                                               // valueが"SLIDER:"で始まるかチェック
+        int sliderValue = std::stoi(value.substr(7)); // スライダーの値を取得（プレフィックスの後）
+        // moveServoToPosition(sliderValue); // ここでサーボモータを動かすなどの処理を行う
+        myservo.write(sliderValue);
+        Serial.println("Received Slider Value: " + String(sliderValue));
+      }
     }
   }
 };
@@ -144,26 +155,100 @@ void timePrint()
 }
 
 // Lチカ
-void blinkLed() 
+void blinkLed()
 {
-  for(int i = 0; i < 10; i++){
-    digitalWrite(_LED_PIN,HIGH);
+  for (int i = 0; i < 10; i++)
+  {
+    digitalWrite(_LED_PIN, HIGH);
     delay(150);
-    digitalWrite(_LED_PIN,LOW);
+    digitalWrite(_LED_PIN, LOW);
     delay(150);
   }
 }
 
-// 　予定時刻と現在の時刻が一致したらLちかさせる
+// 　予定時刻と現在の時刻が一致したらLちかさせる関数
+// void checkTime()
+// {
+//   if (updateReceivedTime && updateReceivedSchedule)
+//   {
+//     if (receivedHour == scheduleHour && receivedMinute == scheduleMinute && receivedSecond == scheduleSecond)
+//     {
+//       // LEDを点灯させる関数
+//       blinkLed();
+//     }
+//   }
+// }
+
+const int minutesBeforeAction = 5; // ここで5, 15, 30など何分前に起動させるのか設定
+
 void checkTime()
 {
   if (updateReceivedTime && updateReceivedSchedule)
   {
-    if (receivedHour == scheduleHour && receivedMinute == scheduleMinute && receivedSecond == scheduleSecond)
+    // 現在時刻と予定時刻の差分を計算（分単位）
+    int currentMinutes = receivedHour * 60 + receivedMinute;
+    int scheduleMinutes = scheduleHour * 60 + scheduleMinute;
+    int diffMinutes = scheduleMinutes - currentMinutes;
+
+    // 予定時刻の何分前にアクションを実行するかをチェック
+    if (diffMinutes == minutesBeforeAction)
     {
-      // LEDを点灯させる関数
+      // アクションを実行
       blinkLed();
     }
+    else if (diffMinutes < 0)
+    {
+      // 予定時刻を過ぎている場合は、フラグをリセット
+      updateReceivedTime = false;
+      updateReceivedSchedule = false;
+    }
+  }
+}
+
+//  心拍センサの値を取得してその結果を返す
+
+const int PulseSensorPurplePin = 32;
+
+int Signal;                              // Incoming raw data from the pulse sensor
+int Threshold = 3100;                    // Determine which signal to "count as a beat"
+volatile int BPM;                        // Beats Per Minute (BPM)
+volatile unsigned long beatLastTime = 0; // Time when the last beat was detected
+
+// 心拍センサの値をハイパスフィルタリングするための変数
+const float alpha = 0.9; // フィルタの強度を設定
+int rawSignal;           // 生のセンサー値
+int filteredSignal;      // フィルタリングされた値
+int lastFilteredSignal;  // 前回のフィルタリングされた値
+
+// BPM値をBLEキャラクタリスティックにセットして通知する関数
+void notifyBPM(int bpmValue)
+{
+  if (deviceConnected)
+  {
+    // BPM値を文字列に変換
+    char bpmStr[10];
+    sprintf(bpmStr, "%d", bpmValue);
+
+    // BPM値をBLEキャラクタリスティックにセット
+    pCharacteristic->setValue((uint8_t *)bpmStr, strlen(bpmStr));
+
+    // 通知を送信
+    pCharacteristic->notify();
+  }
+}
+
+void readPulseSensor()
+{
+  Signal = analogRead(PulseSensorPurplePin);
+  if (Signal > Threshold && (millis() - beatLastTime) > 250)
+  {
+    BPM = 60000 / (millis() - beatLastTime);
+    beatLastTime = millis();
+    Serial.print("BPM: ");
+    Serial.println(BPM);
+
+    // BPM値をBLE経由で通知
+    notifyBPM(BPM);
   }
 }
 
@@ -207,6 +292,8 @@ void setup()
 
   myservo.attach(servoPin);
   myservo.write(40);
+
+  pinMode(PulseSensorPurplePin, INPUT);
 }
 
 void loop()
@@ -214,4 +301,24 @@ void loop()
   // BLEと一度接続された後にその時刻を継続的に吐き出す処理
   timePrint();
   checkTime();
+
+  // 心拍センサの値を取得してシリアルに出力する。
+  // readPulseSensor();
+  // Serial.println(Signal);
+
+  rawSignal = analogRead(PulseSensorPurplePin);
+
+  // ハイパスフィルタを適用する
+  filteredSignal = alpha * (lastFilteredSignal + rawSignal - lastFilteredSignal);
+
+  // 心拍を検出するロジック（ここに追加）
+
+  // シリアルにフィルタリングされた値を出力する
+  Serial.print("Filtered Signal: ");
+  Serial.println(filteredSignal);
+
+  // 以前のフィルタリングされた値を更新
+  lastFilteredSignal = filteredSignal;
+
+  delay(20);
 }

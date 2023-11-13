@@ -20,7 +20,7 @@
       function sendMessage() {
         var message = { message: "hello from browser A" }; // 送信するメッセージ
 
-        fetch("/pusher/trigger", {
+        fetch("http://192.168.10.181:3000/pusher-example/index.html/trigger", {
           // ローカルのNode.jsサーバーに対してPOSTリクエストを送信
           method: "POST",
           headers: {
