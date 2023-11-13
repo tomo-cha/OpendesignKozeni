@@ -19,9 +19,34 @@ class BleConnection {
             this.bleServer = await this.bleDevice.gatt.connect();
             this.timeService = await this.bleServer.getPrimaryService(this.serviceUUID);
             this.timeCharacteristic = await this.timeService.getCharacteristic(this.characteristicUUID);
+
+            // 通知を受け取るためにキャラクタリスティックの通知を開始する
+            await this.timeCharacteristic.startNotifications();
+
+            this.timeCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                let value = new TextDecoder().decode(event.target.value);
+                console.log(`Received notification: ${value}`);
+                this.onBPMReceived(value);
+            });
+
+
         } catch (error) {
             console.error("Error connecting to BLE device:", error);
         }
+    }
+
+    // BLEキャラクタリスティックからの通知をハンドリングする
+    handleNotifications(event) {
+        const value = new TextDecoder().decode(event.target.value);
+        console.log(`Received notification: ${value}`);
+        this.onBPMReceived(value);
+    }
+
+    // BPMデータを受け取ったときの処理を行うメソッド（ページに表示するなど）
+    onBPMReceived(bpmValue) {
+        // このメソッドはオーバーライドして、ページにBPMを表示するなどの処理を実装します
+        console.log(`BPM: ${bpmValue}`);
+        // 例: document.querySelector('#bpmDisplay').textContent = `BPM: ${bpmValue}`;
     }
 
     //データを識別するためのメソッド

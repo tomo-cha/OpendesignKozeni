@@ -5,10 +5,23 @@ const DEVICE_NAME = "XIAO_ESP32BLE";  // デバイス名を設定してくださ
 //　BLEクラスをインスタンス化
 let bleConnection = new BleConnection(DEVICE_NAME, SERVICE_UUID, CHARACTERISTIC_UUID);
 
-//　接続のためのボタン
+// onBPMReceived メソッドをオーバーライドして、ページに BPM 値を表示する
+bleConnection.onBPMReceived = function (bpmValue) {
+    document.getElementById('bpmDisplay').textContent = `${bpmValue}`;
+    if (isRecording) {
+        const currentTime = new Date().toLocaleTimeString(); // 現在の時刻
+        bpmData.push({ time: currentTime, bpm: bpmValue });
+    }
+};
+
+bleConnection.onBpmUpdate = function(bpmValue) {
+    updateBpm(bpmValue);
+};
+
+//接続のためのボタン
 document.getElementById('connectBtn').addEventListener('click', async () => {
     await bleConnection.connect();
-    document.getElementById('iInfo').innerHTML += "接続成功<br>";
+    document.getElementById('iInfo').textContent = "接続成功";
 });
 
 // 時間を送信（sendCurrentTimeを使用）

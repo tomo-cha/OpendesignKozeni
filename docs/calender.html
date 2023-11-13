@@ -32,7 +32,67 @@
     <pre id="content" style="white-space: pre-wrap;"></pre>
 
     <div>遠隔なでなで</div>
-    
+
+    <h1>Pusher Slider Test</h1>
+    <div>スライダー</div>
+    <input
+      type="range"
+      id="slider"
+      min="0"
+      max="180"
+      value="90"
+      oninput="sendSliderValue(this.value)"
+    />
+    <div id="sliderValue">Value: <span id="sliderValueDisplay">90</span></div>
+
+    <h1>BPM Value</h1>
+    <div id="bpmDisplay">--</div>
+
+    <div id="recordButtons">
+      <button id="startRecordingBtn">記録開始</button>
+      <button id="stopRecordingBtn" disabled>記録終了</button>
+    </div>
+
+    <script>
+      let isRecording = false;
+      let bpmData = [];
+
+      document
+        .getElementById("startRecordingBtn")
+        .addEventListener("click", function () {
+          isRecording = true;
+          bpmData = []; // Clear previous data
+          this.disabled = true; // Disable the start button
+          document.getElementById("stopRecordingBtn").disabled = false; // Enable the stop button
+        });
+
+      document
+        .getElementById("stopRecordingBtn")
+        .addEventListener("click", function () {
+          isRecording = false;
+          this.disabled = true; // Disable the stop button
+          document.getElementById("startRecordingBtn").disabled = false; // Enable the start button
+          downloadCSV(bpmData);
+        });
+
+      function downloadCSV(dataArray) {
+        const csvRows = [];
+        csvRows.push("Time,BPM");
+        dataArray.forEach(function (record) {
+          csvRows.push(`${record.time},${record.bpm}`);
+        });
+        const csvString = csvRows.join("\n");
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "bpm_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    </script>
+
 
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
