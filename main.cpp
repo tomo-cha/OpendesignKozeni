@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 // GSRセンサ
-const int GSR = 34; // 接続するanalog pin
+const int GSR_PIN = 33; // 接続するanalog pin
 int gsr_sensorValue = 0;
 int gsr_average = 0;
 int old_gsr_average;
@@ -9,17 +9,26 @@ unsigned long previousMillis = 0;
 const long interval = 250;
 
 // 心拍センサ
-const int HEART = 35; // 接続するanalog pin
-int heart_sensorValue = 0;
-const int heart_threshold = 2100;
-volatile int bpm = 0;
-volatile int beatLastTime = 0; // 前回のビートを検知した時刻を保存するための変数
+const int HEART_PIN = 32; // 接続するanalog pin
+int heart_sensorValue;
+float heart_filteredValue;
+int bpm;
 const int bpm_threshold = 90;
 const int numReadings = 10;
 int readings[numReadings]; // the readings from the analog input
 int readIndex = 0;         // the index of the current reading
 int total = 0;             // the running total
 int bpm_filtered = 0;      // the average
+// 心拍センサーデータの処理のための変数
+float lpfHeart = 0;                // ローパスフィルタの出力
+float hpfHeart = 0;                // ハイパスフィルタの出力
+float previousBpfHeart = 0;        // 前のバンドパスフィルタの出力
+float bpfHeart = 0;                // バンドパスフィルタの出力
+const float filterAlpha = 0.8;     // フィルタのアルファ（LPF用）
+const float filterAlphaBand = 0.2; // フィルタのアルファ（BPF用）
+// BPMを計算するための変数
+volatile unsigned long lastBeatTime = 0; // 最後のビートが検出された時間
+const int heart_threshold = 300;         // バンドパスフィルタ後の値の閾値
 
 // esp32のタイマー割り込み https://garretlab.web.fc2.com/arduino/esp32/examples/ESP32/Timer_RepeatTimer.html
 // センサ値は一定時間ごとにタイマー割り込みでセンサ値を取得する
@@ -33,9 +42,10 @@ int last_nervous_time = 0;
 
 // サーボ
 Servo servo_horizon;           // 左右動きのサーボ
-const int SERVO_HORIZON = 32;  // サーボを接続するピン。適宜変更してください
+const int SERVO_HORIZON = 21;  // サーボを接続するピン。適宜変更してください
 Servo servo_vertical;          // 上下動きのサーボ
-const int SERVO_VERTICAL = 33; // サーボを接続するピン。適宜変更してください
+const int SERVO_VERTICAL = 19; // サーボを接続するピン。適宜変更してください
+int DelayTime;
 
 // ボタン
 const int buttonPin = 14; // 任意のボタンピンを選択。変更が必要な場合はこちらを変更してください
@@ -52,7 +62,7 @@ void getGsrData()
   long sum = 0;
   for (int i = 0; i < 10; i++) // Average the 10 measurements to remove the glitch
   {
-    gsr_sensorValue = analogRead(GSR);
+    gsr_sensorValue = analogRead(GSR_PIN);
     sum += gsr_sensorValue;
   }
   gsr_average = sum / 10;
@@ -62,20 +72,39 @@ void getGsrData()
     old_gsr_average = gsr_average;
   }
 }
-void getHeartData()
+/*
+  心拍センサ
+  脈の収縮時(アナログ値が高いとき)を閾値で検出する(クロススレッショルドピーク検出法)
+  平均値を出力する
+  BPMを計算する
+*/
+// センサデータを読み取り、バンドパスフィルタを適用する関数
+float applyBandPassFilter(int heart_sensorValue)
 {
-  /*
-    心拍センサ
-    脈の収縮時(アナログ値が高いとき)を閾値で検出する(クロススレッショルドピーク検出法)
-    平均値を出力する
-    BPMを計算する
-  */
-  heart_sensorValue = analogRead(HEART); // Read the PulseSensor's value.
+  // DC成分をカットするためのローパスフィルタ
+  lpfHeart = filterAlpha * lpfHeart + (1.0 - filterAlpha) * heart_sensorValue;
 
-  if (heart_sensorValue > heart_threshold && (millis() - beatLastTime) > 250)
-  {                                          // 250msのデバウンス時間
-    bpm = 60000 / (millis() - beatLastTime); // BPMを計算
-    beatLastTime = millis();                 // 最後にビートを検出した時間を更新
+  // 高周波ノイズをカットするためのハイパスフィルタ
+  hpfHeart = heart_sensorValue - lpfHeart;
+
+  // バンドパスフィルタの適用
+  bpfHeart = filterAlphaBand * previousBpfHeart + (1.0 - filterAlphaBand) * hpfHeart;
+
+  previousBpfHeart = bpfHeart; // 次の計算のために現在のフィルタ出力を保存
+
+  return bpfHeart;
+}
+// バンドパスフィルタ後の値からBPMを計算する関数
+void calculateBPM()
+{
+  // バンドパスフィルタを適用した値を取得
+  heart_sensorValue = analogRead(HEART_PIN);
+  heart_filteredValue = applyBandPassFilter(heart_sensorValue);
+
+  // BPMの計算と通知
+  if (heart_filteredValue > heart_threshold && (millis() - lastBeatTime) > 250)
+  { // ビート検出条件
+    bpm = 60000 / (millis() - lastBeatTime); // BPM計算
     // bpmの移動平均を計算
     total = total - readings[readIndex];
     readings[readIndex] = bpm;
@@ -86,40 +115,44 @@ void getHeartData()
       readIndex = 0;
     }
     bpm_filtered = total / numReadings;
+    lastBeatTime = millis(); // 最後のビート時間を更新
+
+    // BPM値をBLE経由で通知（関数は既に定義されていると仮定）
+    // notifyBPM(bpm);
   }
-}
-void ARDUINO_ISR_ATTR onTimer()
-{
-  /*タイマー割り込み*/
-  getGsrData();
-  getHeartData();
+  Serial.print("bpm:");
+  Serial.print(bpm);
+  Serial.print(",");
+  Serial.print("bpm_filtered:");
+  Serial.print(bpm_filtered);
+  Serial.print(",");
 }
 void moveServo1()
 { // 低い緊張緩和 ちょっと上に上げてちょっと左右に動く
   // 上げる
-  for (int i = 40; i > 25; i -= 2)
+  for (int i = 40; i > 30; i -= 2)
   {
     servo_vertical.write(i); // サーボを0度の位置に動かす
     delay(30);               // 0.5秒待つ
   }
   //
-  for (int i = 60; i < 120; i += 2)
+  for (int i = 90; i < 180; i += 2)
   {
     servo_horizon.write(i);
     delay(30);
   }
-  for (int i = 120; i > 0; i -= 2)
+  for (int i = 180; i > 0; i -= 2)
   {
     servo_horizon.write(i);
-    delay(50);
+    delay(30);
   }
-  for (int i = 0; i < 60; i += 2)
+  for (int i = 0; i < 90; i += 2)
   {
     servo_horizon.write(i);
     delay(30);
   }
   // 下げる
-  for (int i = 25; i < 40; i += 2)
+  for (int i = 30; i < 40; i += 2)
   {
     servo_vertical.write(i);
     delay(30);
@@ -128,29 +161,29 @@ void moveServo1()
 void moveServo2()
 { // 中の緊張緩和 ちょっと下に下げて左右に動く
   // 下げる
-  for (int i = 40; i < 55; i += 2)
+  for (int i = 40; i < 50; i += 2)
   {
     servo_vertical.write(i);
     delay(30);
   }
   //
-  for (int i = 60; i < 120; i += 2)
+  for (int i = 90; i < 180; i += 2)
   {
     servo_horizon.write(i);
     delay(30);
   }
-  for (int i = 120; i > 0; i -= 2)
+  for (int i = 180; i > 0; i -= 2)
   {
     servo_horizon.write(i);
-    delay(50);
+    delay(30);
   }
-  for (int i = 0; i < 60; i += 2)
+  for (int i = 0; i < 90; i += 2)
   {
     servo_horizon.write(i);
     delay(30);
   }
   // 上げる
-  for (int i = 55; i > 40; i -= 2)
+  for (int i = 50; i > 40; i -= 2)
   {
     servo_vertical.write(i);
     delay(30);
@@ -159,26 +192,129 @@ void moveServo2()
 void moveServo3()
 { // 高い緊張緩和 大きく下に下げて左右に動く
   // 上げる
+  for (int i = 40; i < 60; i += 2)
+  {
+    servo_vertical.write(i);
+    delay(30);
+  }
+  // 左右
+  for (int i = 90; i < 180; i += 2)
+  {
+    servo_horizon.write(i);
+    delay(30);
+  }
+  for (int i = 180; i > 0; i -= 2)
+  {
+    servo_horizon.write(i);
+    delay(30);
+  }
+  for (int i = 0; i < 90; i += 2)
+  {
+    servo_horizon.write(i);
+    delay(30);
+  }
+  // 下げる
+  for (int i = 60; i > 40; i -= 2)
+  {
+    servo_vertical.write(i);
+    delay(30);
+  }
+}
+/*
+  月曜日 実験用動き
+  1.イージングをかけない
+  2.左右の動きにイージングをかける
+  だんだん遅くなる2次関数的イージング
+  最大速度は5cm/sになるようにする https://journals.lww.com/neuroreport/abstract/1999/07130/psychophysical_assessment_of_the_affective.17.aspx
+*/
+void moveServo1_2()
+{
+  // 低い緊張緩和 ちょっと上に上げてちょっと左右に動く
+  // 上げる
+  for (int i = 40; i > 25; i -= 2)
+  {
+    servo_vertical.write(i); // サーボを0度の位置に動かす
+    delay(30);               // 0.5秒待つ
+  }
+  //
+  for (int i = 90; i < 180; i += 2)
+  {
+    servo_horizon.write(i);
+    delay(10);
+  }
+  for (int i = 180; i > 0; i -= 2)
+  {
+    servo_horizon.write(i);
+    delay(10);
+  }
+  for (int i = 0; i < 90; i += 2)
+  {
+    servo_horizon.write(i);
+    delay(10);
+  }
+  // 下げる
+  for (int i = 25; i < 40; i += 2)
+  {
+    servo_vertical.write(i);
+    delay(30);
+  }
+}
+void moveServo2_2()
+{
+  // 中の緊張緩和 ちょっと下に下げて左右に動く
+  // 下げる
+  for (int i = 40; i < 55; i += 2)
+  {
+    servo_vertical.write(i);
+    delay(30);
+  }
+  //
+  for (int i = 90; i < 180; i += 2)
+  {
+    servo_horizon.write(i);
+    delay(10);
+  }
+  for (int i = 180; i > 0; i -= 2)
+  {
+    servo_horizon.write(i);
+    delay(10);
+  }
+  for (int i = 0; i < 90; i += 2)
+  {
+    servo_horizon.write(i);
+    delay(10);
+  }
+  // 上げる
+  for (int i = 55; i > 40; i -= 2)
+  {
+    servo_vertical.write(i);
+    delay(30);
+  }
+}
+void moveServo3_2()
+{
+  // 高い緊張緩和 大きく下に下げて左右に動く
+  // 上げる
   for (int i = 40; i < 65; i += 2)
   {
     servo_vertical.write(i);
     delay(30);
   }
   //
-  for (int i = 60; i < 120; i += 2)
+  for (int i = 90; i < 180; i += 2)
   {
     servo_horizon.write(i);
-    delay(30);
+    delay(10);
   }
-  for (int i = 120; i > 0; i -= 2)
+  for (int i = 180; i > 0; i -= 2)
   {
     servo_horizon.write(i);
-    delay(50);
+    delay(10);
   }
-  for (int i = 0; i < 60; i += 2)
+  for (int i = 0; i < 90; i += 2)
   {
     servo_horizon.write(i);
-    delay(30);
+    delay(10);
   }
   // 下げる
   for (int i = 65; i > 40; i -= 2)
@@ -200,17 +336,6 @@ void setup()
     readings[thisReading] = 0;
   }
 
-  // タイマー割り込み
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTimer, true); // Attach onTimer function to our timer.
-
-  // Set alarm to call onTimer function every second (value in microseconds).
-  // Repeat the alarm (third parameter)
-  timerAlarmWrite(timer, 50000, true); // 50msごとに呼び出し
-
-  // Start an alarm
-  timerAlarmEnable(timer);
-
   // サーボ
   servo_horizon.attach(SERVO_HORIZON); // サーボピンを指定
   servo_horizon.write(60);
@@ -223,20 +348,20 @@ void setup()
 
 void loop()
 {
+  getGsrData();
+  calculateBPM();
+  /*
+    serial plotter用
+    Serial.print(文字列: 変数,)      の形式で書くことで表示ができる
+  */
   Serial.print("GSR:");
-  Serial.print(analogRead(GSR));
+  Serial.print(analogRead(GSR_PIN));
   Serial.print(",");
   Serial.print("GSR_filtered:");
   Serial.print(gsr_average);
   Serial.print(",");
   Serial.print("HEART:");
-  Serial.print(heart_sensorValue);
-  Serial.print(",");
-  Serial.print("bpm:");
-  Serial.print(bpm);
-  Serial.print(",");
-  Serial.print("bpm_filtered:");
-  Serial.print(bpm_filtered);
+  Serial.print(analogRead(HEART_PIN));
   Serial.print(",");
   /*
     緊張の判定
@@ -282,8 +407,20 @@ void loop()
     {
       moveServo3();
     }
+    else if (buttonCount == 4)
+    {
+      moveServo1_2();
+    }
+    else if (buttonCount == 5)
+    {
+      moveServo2_2();
+    }
+    else if (buttonCount == 6)
+    {
+      moveServo3_2();
+    }
     buttonCount++;
-    if (buttonCount > 3)
+    if (buttonCount > 6)
     {
       buttonCount = 1;
     }
