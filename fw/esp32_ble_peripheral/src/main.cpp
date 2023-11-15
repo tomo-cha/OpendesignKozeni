@@ -68,6 +68,8 @@ bool updateReceivedTime = false;
 int scheduleHour = 0, scheduleMinute = 0, scheduleSecond = 0;
 bool updateReceivedSchedule = false;
 
+int minutesBeforeAction = 5; // ここで5, 15, 30など何分前に起動させるのか設定
+
 // 現在時刻を受け付けるためのコールバック
 // および予約時間を受け付けるための変数を追加
 class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
@@ -119,6 +121,15 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
         // moveServoToPosition(sliderValue); // ここでサーボモータを動かすなどの処理を行う
         myservo.write(sliderValue);
         Serial.println("Received Slider Value: " + String(sliderValue));
+      }
+
+      // 間隔のデータを送信する：
+      if (value.rfind("INTERVAL:", 0) == 0)
+      {
+        int interval = std::stoi(value.substr(9)); // "INTERVAL:" の後の文字列を整数に変換
+        // intervalの値を使って何かの処理を行う
+        minutesBeforeAction = interval;
+        Serial.println("Received Interval: " + String(interval));
       }
     }
   }
@@ -178,7 +189,7 @@ void blinkLed()
 //   }
 // }
 
-const int minutesBeforeAction = 5; // ここで5, 15, 30など何分前に起動させるのか設定
+
 
 void checkTime()
 {
@@ -323,6 +334,7 @@ void loop()
 {
   // BLEと一度接続された後にその時刻を継続的に吐き出す処理
   timePrint();
+
   checkTime();
 
   calculateBPM();

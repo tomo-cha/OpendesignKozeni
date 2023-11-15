@@ -3,10 +3,11 @@
   <head>
     <!-- ... 他のヘッダー要素 ... -->
     <title>BLE接続とデータ送信</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <!-- 接続ボタン -->
+    <h1>BLE Connection</h1>
     <div>接続開始</div>
     <button id="connectBtn">接続</button>
 
@@ -15,21 +16,56 @@
     <button id="sendTimeBtn">現在時刻を送る</button>
     <button id="sendABtn">Aを送る</button>
     <button id="sendBBtn">Bを送信</button>
-  
+
     <div>Console</div>
     <button id="clearBtn">情報をクリア</button>
     <!-- 情報を表示するエリア -->
     <div id="iInfo">---</div>
 
     <!-- google calender API -->
+    <h1>Google Calender API</h1>
+    <!-- プルダウンメニューを追加 -->
+    <div>
+      <label for="intervalSelect">何分前通知ですか？:</label>
+      <select id="intervalSelect">
+        <option value="5">5分前</option>
+        <option value="15">15分前</option>
+        <option value="30">30分前</option>
+      </select>
+      <button id="sendIntervalBtn">間隔を送信</button>
+    </div>
+
+    <script>
+      // 間隔を送信するボタンのイベントリスナーを追加
+      document
+        .getElementById("sendIntervalBtn")
+        .addEventListener("click", async () => {
+          const intervalValue = document.getElementById("intervalSelect").value; // 選択された間隔値を取得
+          await bleConnection.sendData("INTERVAL", intervalValue); // BLE経由で送信
+          document.getElementById(
+            "iInfo"
+          ).innerHTML += `Sent interval: ${intervalValue} seconds<br>`; // 確認用のメッセージを表示
+        });
+    </script>
+
     <div>カレンダー情報の取得と送信</div>
-    <button id="authorize_button" onclick="handleAuthClick()" class="button">Authorize</button>
-    <button id="signout_button" onclick="handleSignoutClick()" class="button">Sign Out</button>
-    <button id="displayMeetingTimesButton" onclick="displayMeetingTimes()" class="button">Display Meeting Times</button>
+    <button id="authorize_button" onclick="handleAuthClick()" class="button">
+      Authorize
+    </button>
+    <button id="signout_button" onclick="handleSignoutClick()" class="button">
+      Sign Out
+    </button>
+    <button
+      id="displayMeetingTimesButton"
+      onclick="displayMeetingTimes()"
+      class="button"
+    >
+      Display Meeting Times
+    </button>
     <pre id="meetingTimes"></pre>
 
     <!-- 情報を表示するエリア2 -->
-    <pre id="content" style="white-space: pre-wrap;"></pre>
+    <pre id="content" style="white-space: pre-wrap"></pre>
 
     <div>遠隔なでなで</div>
 
@@ -93,14 +129,34 @@
       }
     </script>
 
+    <style>
+      #sliderValue {
+        margin-top: 20px;
+      }
 
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+      #bpmDisplay {
+        font-size: 3em; /* 大きさを調整する */
+        font-weight: bold;
+        margin-top: 10px;
+      }
+    </style>
+
+    <script
+      async
+      defer
+      src="https://apis.google.com/js/api.js"
+      onload="gapiLoaded()"
+    ></script>
+    <script
+      async
+      defer
+      src="https://accounts.google.com/gsi/client"
+      onload="gisLoaded()"
+    ></script>
 
     <!-- htmlで呼び出してるjs -->
     <script src="googleApi.js"></script>
     <script src="BleConnection.js"></script>
     <script src="main.js"></script>
-
   </body>
 </html>
