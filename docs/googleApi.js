@@ -129,7 +129,7 @@ function displayMeetingTimes() {
     }).then(response => {
         const events = response.result.items;
         const meetingsOutput = events
-            .filter(event => containsKeyword(event.summary, "meeting"))
+            .filter(event => containsKeyword(event.summary, "presentation"))
             .reduce((str, event) => {
                 const formattedTime = formatDateTime(event.start.dateTime || event.start.date);
                 return `${str}${formattedTime}\n`;
