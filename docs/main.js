@@ -37,7 +37,7 @@ document.getElementById('meetingTimes').addEventListener('DOMSubtreeModified', a
         const meetingTime = meetingTimeElem.innerText.split('\n')[1]; // 2行目に時刻があると仮定
         if (meetingTime) {
             await bleConnection.sendMeetingTime(meetingTime);
-            document.getElementById('iInfo').innerHTML += `Sent meeting time: ${meetingTime}<br>`;
+            document.getElementById('iInfo').innerHTML += `Sent presentation time: ${meetingTime}<br>`;
         }
     }
 });
